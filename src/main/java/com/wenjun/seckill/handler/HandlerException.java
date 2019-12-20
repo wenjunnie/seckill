@@ -28,7 +28,6 @@ public class HandlerException {
             BusinessException businessException = (BusinessException) e;
             map.put("errCode", businessException.getErrCode());
             map.put("errMsg", businessException.getErrMsg());
-            return CommonReturnType.create(map,"success");
         } else {
             map.put("errCode", EmBusinessError.UNKNOWN_ERROR.getErrCode());
             map.put("errMsg", EmBusinessError.UNKNOWN_ERROR.getErrMsg());

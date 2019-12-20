@@ -6,6 +6,7 @@ import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.response.CommonReturnType;
 import com.wenjun.seckill.service.impl.UserServiceImpl;
 import com.wenjun.seckill.service.model.UserModel;
+import org.apache.catalina.User;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.security.MD5Encoder;
 import org.springframework.beans.BeanUtils;
@@ -35,7 +36,7 @@ public class UserController {
     private HttpServletRequest httpServletRequest;
 
     //通过ID获取对应用户
-    @GetMapping("/get")
+    @GetMapping(value = "/get")
     public CommonReturnType getUser(@RequestParam(name = "id") Integer id) throws BusinessException {
         // 调用service服务获取对应ID的用户对象并返回给前端
         UserModel userModel = userService.getUserById(id);
@@ -60,6 +61,7 @@ public class UserController {
         return CommonReturnType.create("验证码发送成功");
     }
 
+    //用户注册接口
     @PostMapping(value = "/register")
     public CommonReturnType register(@RequestParam(name = "telphone") String telphone,
                                      @RequestParam(name = "otpCode") String otpCode,
@@ -77,10 +79,27 @@ public class UserController {
         userModel.setName(name);
         userModel.setGender(gender);
         userModel.setAge(age);
-        userModel.setEncrptPassword(this.EncodeByMd5(password));
+        if (!password.isEmpty()) {//不能用==null,"" != null
+            userModel.setEncrptPassword(this.EncodeByMd5(password));
+        }
 
         userService.register(userModel);
         return CommonReturnType.create("注册成功");
+    }
+
+    //用户登录接口
+    @GetMapping(value = "/login")
+    public CommonReturnType login(@RequestParam(name = "telphone") String telphone,
+                                  @RequestParam(name = "password") String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+        if (StringUtils.isEmpty(telphone) || StringUtils.isEmpty(password)) {
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
+        }
+        //校验登录是否合法
+        UserModel userModel = userService.validateLogin(telphone,password);
+        //将登录凭证加入到用户登录的session中
+        this.httpServletRequest.getSession().setAttribute("IS_LOGIN",true);
+        this.httpServletRequest.getSession().setAttribute("LOGIN_USER",userModel);
+        return CommonReturnType.create("登录成功");
     }
 
     public String EncodeByMd5(String str) throws NoSuchAlgorithmException, UnsupportedEncodingException {

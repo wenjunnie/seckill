@@ -1,5 +1,6 @@
 package com.wenjun.seckill.service.impl;
 
+import com.wenjun.seckill.controller.UserController;
 import com.wenjun.seckill.dao.UserDOMapper;
 import com.wenjun.seckill.dao.UserPasswordDOMapper;
 import com.wenjun.seckill.dataobject.UserDO;
@@ -8,10 +9,15 @@ import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.service.UserService;
 import com.wenjun.seckill.service.model.UserModel;
+import com.wenjun.seckill.validator.ValidationResult;
+import com.wenjun.seckill.validator.ValidatorImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * @Author: wenjun
@@ -25,6 +31,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserPasswordDOMapper userPasswordDOMapper;
+
+    @Autowired
+    private UserController userController;
+
+    @Autowired
+    private ValidatorImpl validator;
 
     @Override
     public UserModel getUserById(Integer id) {
@@ -41,11 +53,15 @@ public class UserServiceImpl implements UserService {
         if (userModel == null) {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
         }
-        if (StringUtils.isEmpty(userModel.getName())
-                || userModel.getGender() == null
-                || userModel.getAge() == null
-                || StringUtils.isEmpty(userModel.getTelphone())) {
-            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
+//        if (StringUtils.isEmpty(userModel.getName())
+//                || userModel.getGender() == null
+//                || userModel.getAge() == null
+//                || StringUtils.isEmpty(userModel.getTelphone())) {
+//            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
+//        }
+        ValidationResult result = validator.validate(userModel);
+        if (result.isHasErrors()) {
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,result.getErrMsg());
         }
         //userModel转成userDO
         UserDO userDO = convertFromModel(userModel);
@@ -56,6 +72,23 @@ public class UserServiceImpl implements UserService {
         userPasswordDOMapper.insertSelective(userPasswordDO);
 
         return;
+    }
+
+    @Override
+    public UserModel validateLogin(String telphone, String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+        //获取用户信息
+        UserDO userDO = userDOMapper.selectByTelphone(telphone);
+        if (userDO == null) {
+            throw new BusinessException(EmBusinessError.USER_LOGIN_FAIL);
+        }
+        UserPasswordDO userPasswordDO = userPasswordDOMapper.selectByUserId(userDO.getId());
+        UserModel userModel = convertFromDataObject(userDO,userPasswordDO);
+        //校验密码
+        String encodePassword = userController.EncodeByMd5(password);
+        if (!StringUtils.equals(encodePassword,userPasswordDO.getEncrptPassword())) {
+            throw new BusinessException(EmBusinessError.USER_LOGIN_FAIL);
+        }
+        return userModel;
     }
 
     private UserModel convertFromDataObject(UserDO userDO, UserPasswordDO userPasswordDO) {
