@@ -31,8 +31,8 @@
         </javaClientGenerator>
 
 <!--        <table tableName="user_info" domainObjectName="UserDO" enableCountByExample="false"-->
-<!--        enableUpdateByExample="false" enableDeleteByExample="false"-->
-<!--        enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
+<!--                enableUpdateByExample="false" enableDeleteByExample="false"-->
+<!--                enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
 <!--        <table tableName="user_password" domainObjectName="UserPasswordDO" enableCountByExample="false"-->
 <!--               enableUpdateByExample="false" enableDeleteByExample="false"-->
 <!--               enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
@@ -40,6 +40,12 @@
 <!--               enableUpdateByExample="false" enableDeleteByExample="false"-->
 <!--               enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
 <!--        <table tableName="item_stock" domainObjectName="ItemStockDO" enableCountByExample="false"-->
+<!--               enableUpdateByExample="false" enableDeleteByExample="false"-->
+<!--               enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
+<!--        <table tableName="order_info" domainObjectName="OrderDO" enableCountByExample="false"-->
+<!--               enableUpdateByExample="false" enableDeleteByExample="false"-->
+<!--               enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
+<!--        <table tableName="sequence_info" domainObjectName="SequenceDO" enableCountByExample="false"-->
 <!--               enableUpdateByExample="false" enableDeleteByExample="false"-->
 <!--               enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
 <!--        <table schema="DB2ADMIN" tableName="ALLTYPES" domainObjectName="Customer" >-->

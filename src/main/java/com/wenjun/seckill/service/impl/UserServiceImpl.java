@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
@@ -49,6 +50,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void register(UserModel userModel) throws BusinessException {
         if (userModel == null) {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
@@ -59,6 +61,7 @@ public class UserServiceImpl implements UserService {
 //                || StringUtils.isEmpty(userModel.getTelphone())) {
 //            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
 //        }
+        //参数校验
         ValidationResult result = validator.validate(userModel);
         if (result.isHasErrors()) {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,result.getErrMsg());
