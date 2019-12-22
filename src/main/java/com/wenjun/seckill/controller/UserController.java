@@ -77,6 +77,7 @@ public class UserController {
         userModel.setName(name);
         userModel.setGender(gender);
         userModel.setAge(age);
+        userModel.setRegisterMode("byPhone");
         if (!password.isEmpty()) {//不能用==null,"" != null
             userModel.setEncrptPassword(this.EncodeByMd5(password));
         }
