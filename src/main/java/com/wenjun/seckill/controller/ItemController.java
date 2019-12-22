@@ -5,6 +5,7 @@ import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.response.CommonReturnType;
 import com.wenjun.seckill.service.ItemService;
 import com.wenjun.seckill.service.model.ItemModel;
+import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -69,6 +70,15 @@ public class ItemController {
         }
         ItemVO itemVO = new ItemVO();
         BeanUtils.copyProperties(itemModel,itemVO);
+        if (itemModel.getPromoModel() != null) {
+            //有未结束的秒杀活动
+            itemVO.setPromoStatus(itemModel.getPromoModel().getStatus());
+            itemVO.setPromoId(itemModel.getPromoModel().getId());
+            itemVO.setPromoPrice(itemModel.getPromoModel().getPromoPrice());
+            itemVO.setStartDate(itemModel.getPromoModel().getStartDate().toString(DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")));
+        } else {
+            itemVO.setPromoStatus(0);
+        }
         return itemVO;
     }
 }

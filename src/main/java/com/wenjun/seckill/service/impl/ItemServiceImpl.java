@@ -7,7 +7,9 @@ import com.wenjun.seckill.dataobject.ItemStockDO;
 import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.service.ItemService;
+import com.wenjun.seckill.service.PromoService;
 import com.wenjun.seckill.service.model.ItemModel;
+import com.wenjun.seckill.service.model.PromoModel;
 import com.wenjun.seckill.validator.ValidationResult;
 import com.wenjun.seckill.validator.ValidatorImpl;
 import org.springframework.beans.BeanUtils;
@@ -34,6 +36,9 @@ public class ItemServiceImpl implements ItemService {
 
     @Autowired
     private ItemStockDOMapper itemStockDOMapper;
+
+    @Autowired
+    private PromoService promoService;
 
     @Override
     @Transactional
@@ -68,13 +73,20 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemModel getItemById(Integer id) {
+        //获得商品信息
         ItemDO itemDo = itemDOMapper.selectByPrimaryKey(id);
         if (itemDo == null) {
             return null;
         }
+        //获得库存信息
         ItemStockDO itemStockDO = itemStockDOMapper.selectByItemId(id);
         //dataobject -> model
         ItemModel itemModel = convertModelFromDataObject(itemDo,itemStockDO);
+        //获得活动商品信息
+        PromoModel promoModel = promoService.getPromoByItemId(itemModel.getId());
+        if (promoModel != null && promoModel.getStatus() != 3) {
+            itemModel.setPromoModel(promoModel);
+        }
         return itemModel;
     }
 

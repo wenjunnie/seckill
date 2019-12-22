@@ -48,6 +48,9 @@
 <!--        <table tableName="sequence_info" domainObjectName="SequenceDO" enableCountByExample="false"-->
 <!--               enableUpdateByExample="false" enableDeleteByExample="false"-->
 <!--               enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
+<!--        <table tableName="promo" domainObjectName="PromoDO" enableCountByExample="false"-->
+<!--               enableUpdateByExample="false" enableDeleteByExample="false"-->
+<!--               enableSelectByExample="false" selectByExampleQueryId="false"></table>-->
 <!--        <table schema="DB2ADMIN" tableName="ALLTYPES" domainObjectName="Customer" >-->
 <!--            <property name="useActualColumnNames" value="true"/>-->
 <!--            <generatedKey column="ID" sqlStatement="DB2" identity="true" />-->
