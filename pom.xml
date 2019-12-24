@@ -96,7 +96,7 @@
                 <executions>
                     <execution>
                         <id>mybatis generator</id>
-                        <phase>package</phase>
+                        <phase>deploy</phase>
                         <goals>
                             <goal>generate</goal>
                         </goals>
