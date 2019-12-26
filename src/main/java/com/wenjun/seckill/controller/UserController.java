@@ -53,7 +53,8 @@ public class UserController {
 //        int randomInt = random.nextInt(99999);
 //        randomInt += 10000;
 //        String otpCode = String.valueOf(randomInt);
-        String otpCode = AliyunMessageUtil.createRandomNum(6);
+        //生成6位随机数
+        String otpCode = AliyunMessageUtil.createRandomNum();
         //将otp验证码与手机号关联（通过session）
         httpServletRequest.getSession().setAttribute("telphone",telphone);
         httpServletRequest.getSession().setAttribute("otpCode",otpCode);

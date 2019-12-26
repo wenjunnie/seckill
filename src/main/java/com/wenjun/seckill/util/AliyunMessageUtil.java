@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * 阿里云短信验证
@@ -55,7 +56,7 @@ public class AliyunMessageUtil {
         return sendSmsResponse;
     }
     //通过阿里云发送短信验证码
-    public static void sendMsg(String uphone,String randomNum) throws com.aliyuncs.exceptions.ClientException {
+    public static void sendMsg(String uphone, String randomNum) throws com.aliyuncs.exceptions.ClientException {
         String jsonContent = "{\"code\":\"" + randomNum + "\"}";
         Map<String, String> paramMap = new HashMap<>();
         paramMap.put("phoneNumber", uphone);
@@ -65,13 +66,11 @@ public class AliyunMessageUtil {
         SendSmsResponse sendSmsResponse = sendSms(paramMap);
     }
 
-    //生成num位随机数
-    public static String createRandomNum(int num){
-        String randomNumStr = "";
-        for(int i = 0; i < num;i ++){
-            int randomNum = (int)(Math.random() * 10);
-            randomNumStr += randomNum;
-        }
-        return randomNumStr;
+    //生成6位随机数
+    public static String createRandomNum() {
+        Random random = new Random();
+        int randomInt = random.nextInt(900000);
+        randomInt += 100000;
+        return String.valueOf(randomInt);
     }
 }

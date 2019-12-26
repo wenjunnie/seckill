@@ -6,13 +6,14 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.io.Serializable;
 
 /**
  * @Author: wenjun
  * @Date: 2019/12/19 14:01
  */
 @Data
-public class UserModel  {
+public class UserModel implements Serializable {
     private Integer id;
     @NotBlank(message = "姓名不能为空")
     private String name;
