@@ -4,6 +4,7 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 import org.springframework.stereotype.Component;
 
 /**
+ * Redis配置类，可以在此修改Redis默认配置
  * @Author: wenjun
  * @Date: 2019/12/26 12:04
  */

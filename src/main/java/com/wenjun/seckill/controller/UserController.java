@@ -11,6 +11,7 @@ import com.wenjun.seckill.util.AliyunMessageUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import sun.misc.BASE64Encoder;
 
@@ -18,6 +19,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: wenjun
@@ -33,6 +36,9 @@ public class UserController {
 
     @Autowired
     private HttpServletRequest httpServletRequest;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     //通过ID获取对应用户
     @GetMapping(value = "/get")
@@ -101,9 +107,17 @@ public class UserController {
         //校验登录是否合法
         UserModel userModel = userService.validateLogin(telphone,password);
         //将登录凭证加入到用户登录的session中
-        this.httpServletRequest.getSession().setAttribute("IS_LOGIN",true);
-        this.httpServletRequest.getSession().setAttribute("LOGIN_USER",userModel);
-        return CommonReturnType.create("登录成功");
+//        this.httpServletRequest.getSession().setAttribute("IS_LOGIN",true);
+//        this.httpServletRequest.getSession().setAttribute("LOGIN_USER",userModel);
+        //修改成若用户登录验证成功后将对应的登录信息和登录凭证一起存入Redis中
+        //生成登录凭证token（UUID）
+        String uuidToken = UUID.randomUUID().toString();
+        uuidToken = uuidToken.replace("-","");
+        //建立token和用户登录态之间的联系
+        redisTemplate.opsForValue().set(uuidToken,userModel);
+        redisTemplate.expire(uuidToken,1,TimeUnit.HOURS);
+        //下发token给前端
+        return CommonReturnType.create(uuidToken);
     }
 
     public String EncodeByMd5(String str) throws NoSuchAlgorithmException, UnsupportedEncodingException {
