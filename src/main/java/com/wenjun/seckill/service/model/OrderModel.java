@@ -2,6 +2,7 @@ package com.wenjun.seckill.service.model;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -9,7 +10,7 @@ import java.math.BigDecimal;
  * @Date: 2019/12/21 18:05
  */
 @Data
-public class OrderModel {
+public class OrderModel implements Serializable {
     //交易号
     private String id;
     private Integer userId;

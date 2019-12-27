@@ -38,7 +38,7 @@ public class UserController {
     private HttpServletRequest httpServletRequest;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<Object,Object> redisTemplate;
 
     //通过ID获取对应用户
     @GetMapping(value = "/get")

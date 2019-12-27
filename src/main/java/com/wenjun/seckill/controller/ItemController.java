@@ -8,10 +8,12 @@ import com.wenjun.seckill.service.model.ItemModel;
 import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +27,9 @@ public class ItemController {
 
     @Autowired
     private ItemService itemService;
+
+    @Autowired
+    private RedisTemplate<Object,Object> redisTemplate;
 
     //创建商品
     @PostMapping(value = "/create")
@@ -48,7 +53,12 @@ public class ItemController {
     //浏览某个商品
     @GetMapping(value = "/get")
     public CommonReturnType getItem(@RequestParam(name = "id") Integer id) {
-        ItemModel itemModel = itemService.getItemById(id);
+        ItemModel itemModel = (ItemModel) redisTemplate.opsForValue().get("item_" + id);
+        if (itemModel == null) {
+            itemModel = itemService.getItemById(id);
+            redisTemplate.opsForValue().set("item_" + id,itemModel);
+            redisTemplate.expire("item_" + id,10,TimeUnit.MINUTES);
+        }
         ItemVO itemVO = convertVOFromModel(itemModel);
         return CommonReturnType.create(itemVO);
     }
