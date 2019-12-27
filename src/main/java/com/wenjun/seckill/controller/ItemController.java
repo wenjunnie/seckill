@@ -3,6 +3,7 @@ package com.wenjun.seckill.controller;
 import com.wenjun.seckill.controller.viewobject.ItemVO;
 import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.response.CommonReturnType;
+import com.wenjun.seckill.service.CacheService;
 import com.wenjun.seckill.service.ItemService;
 import com.wenjun.seckill.service.model.ItemModel;
 import org.joda.time.format.DateTimeFormat;
@@ -31,6 +32,9 @@ public class ItemController {
     @Autowired
     private RedisTemplate<Object,Object> redisTemplate;
 
+    @Autowired
+    private CacheService cacheService;
+
     //创建商品
     @PostMapping(value = "/create")
     public CommonReturnType createItem(@RequestParam(name = "title") String title,
@@ -53,12 +57,21 @@ public class ItemController {
     //浏览某个商品
     @GetMapping(value = "/get")
     public CommonReturnType getItem(@RequestParam(name = "id") Integer id) {
-        ItemModel itemModel = (ItemModel) redisTemplate.opsForValue().get("item_" + id);
+        //先取本地缓存
+        ItemModel itemModel = (ItemModel) cacheService.getFromCommonCache("item_" + id);
         if (itemModel == null) {
-            itemModel = itemService.getItemById(id);
-            redisTemplate.opsForValue().set("item_" + id,itemModel);
-            redisTemplate.expire("item_" + id,10,TimeUnit.MINUTES);
+            //若本地缓存不存在，到Redis内获取
+            itemModel = (ItemModel) redisTemplate.opsForValue().get("item_" + id);
+            if (itemModel == null) {
+                //若Redis内不存在，到数据库内获取并设置ItemModel到Redis内
+                itemModel = itemService.getItemById(id);
+                redisTemplate.opsForValue().set("item_" + id,itemModel);
+                redisTemplate.expire("item_" + id,10,TimeUnit.MINUTES);
+            }
+            //填充本地缓存
+            cacheService.setCommonCache("item_" + id,itemModel);
         }
+
         ItemVO itemVO = convertVOFromModel(itemModel);
         return CommonReturnType.create(itemVO);
     }

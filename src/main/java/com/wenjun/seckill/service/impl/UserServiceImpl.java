@@ -14,6 +14,7 @@ import com.wenjun.seckill.validator.ValidatorImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,8 +88,12 @@ public class UserServiceImpl implements UserService {
         UserPasswordDO userPasswordDO = userPasswordDOMapper.selectByUserId(userDO.getId());
         UserModel userModel = convertFromDataObject(userDO,userPasswordDO);
         //校验密码
-        String encodePassword = userController.EncodeByMd5(password);
-        if (!StringUtils.equals(encodePassword,userPasswordDO.getEncrptPassword())) {
+//        String encodePassword = userController.EncodeByMd5(password);
+//        if (!StringUtils.equals(encodePassword,userPasswordDO.getEncrptPassword())) {
+//            throw new BusinessException(EmBusinessError.USER_LOGIN_FAIL);
+//        }
+        String encrptPassword = userModel.getEncrptPassword();
+        if (!BCrypt.checkpw(password,encrptPassword)) {//前后顺序不能对调
             throw new BusinessException(EmBusinessError.USER_LOGIN_FAIL);
         }
         return userModel;

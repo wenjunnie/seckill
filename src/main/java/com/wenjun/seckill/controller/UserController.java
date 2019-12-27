@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.web.bind.annotation.*;
 import sun.misc.BASE64Encoder;
 
@@ -90,7 +91,10 @@ public class UserController {
         userModel.setAge(age);
         userModel.setRegisterMode("byPhone");
         if (!password.isEmpty()) {//不能用==null,"" != null
-            userModel.setEncrptPassword(this.EncodeByMd5(password));
+            //userModel.setEncrptPassword(this.EncodeByMd5(password));
+            //使用Spring Security加密
+            String encrptPassword = BCrypt.hashpw(password,BCrypt.gensalt());
+            userModel.setEncrptPassword(encrptPassword);
         }
 
         userService.register(userModel);
@@ -120,6 +124,13 @@ public class UserController {
         return CommonReturnType.create(uuidToken);
     }
 
+    /**
+     * Md5加密，已更改为使用Spring Security
+     * @param str //待加密字符串
+     * @return
+     * @throws NoSuchAlgorithmException
+     * @throws UnsupportedEncodingException
+     */
     public String EncodeByMd5(String str) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         //确定计算方法
         MessageDigest md5 = MessageDigest.getInstance("MD5");
