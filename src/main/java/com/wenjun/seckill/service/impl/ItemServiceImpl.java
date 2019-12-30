@@ -111,6 +111,18 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
+    public boolean decreaseStockInRedis(Integer itemId, Integer amount) {
+        long result = redisTemplate.opsForValue().decrement("promo_item_stock" + itemId,amount);
+        if (result >= 0) {
+            return true;
+        } else {
+            redisTemplate.delete("promo_item_stock" + itemId);
+            return false;
+        }
+    }
+
+    @Override
+    @Transactional
     public void increaseSales(Integer itemId, Integer amount) {
         itemDOMapper.increaseSales(itemId,amount);
     }

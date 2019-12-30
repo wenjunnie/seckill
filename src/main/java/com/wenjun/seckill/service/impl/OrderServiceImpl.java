@@ -69,7 +69,13 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         //落单减库存(√)OR支付减库存
-        boolean result = itemService.decreaseStock(itemId,amount);
+        boolean result;
+        //若商品为秒杀商品则从Redis中减库存，否则从数据库中减库存，前提秒杀未开始时按钮置灰
+        if (promoId == null) {
+            result = itemService.decreaseStock(itemId,amount);
+        } else {
+            result = itemService.decreaseStockInRedis(itemId,amount);
+        }
         if (!result) {
             throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
         }
