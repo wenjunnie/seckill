@@ -12,14 +12,17 @@ import com.wenjun.seckill.service.model.UserModel;
 import com.wenjun.seckill.validator.ValidationResult;
 import com.wenjun.seckill.validator.ValidatorImpl;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: wenjun
@@ -40,6 +43,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private ValidatorImpl validator;
 
+    @Autowired
+    private RedisTemplate<Object,Object> redisTemplate;
+
     @Override
     public UserModel getUserById(Integer id) {
         //调用userdomapper获取对应的用户dataobject
@@ -48,6 +54,17 @@ public class UserServiceImpl implements UserService {
         //通过用户ID获得UserPasswordDO对象
         UserPasswordDO userPasswordDO = userPasswordDOMapper.selectByUserId(id);
         return convertFromDataObject(userDO,userPasswordDO);
+    }
+
+    @Override
+    public UserModel getUserByIdInCache(Integer id) {
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get("user_validate_" + id);
+        if (userModel == null) {
+            userModel = this.getUserById(id);
+            redisTemplate.opsForValue().set("user_validate_" + id,userModel);
+            redisTemplate.expire("user_validate_" + id,10, TimeUnit.MINUTES);
+        }
+        return userModel;
     }
 
     @Override

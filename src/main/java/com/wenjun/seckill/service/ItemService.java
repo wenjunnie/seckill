@@ -20,4 +20,6 @@ public interface ItemService {
     boolean decreaseStock(Integer itemId,Integer amount);
     //下单后增销量
     void increaseSales(Integer itemId,Integer amount);
+    //item及promo model缓存模型
+    ItemModel getItemByIdInCache(Integer id);
 }

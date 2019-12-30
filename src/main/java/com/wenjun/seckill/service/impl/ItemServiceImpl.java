@@ -14,11 +14,13 @@ import com.wenjun.seckill.validator.ValidationResult;
 import com.wenjun.seckill.validator.ValidatorImpl;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +41,9 @@ public class ItemServiceImpl implements ItemService {
 
     @Autowired
     private PromoService promoService;
+
+    @Autowired
+    private RedisTemplate<Object,Object> redisTemplate;
 
     @Override
     @Transactional
@@ -108,6 +113,17 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public void increaseSales(Integer itemId, Integer amount) {
         itemDOMapper.increaseSales(itemId,amount);
+    }
+
+    @Override
+    public ItemModel getItemByIdInCache(Integer id) {
+        ItemModel itemModel = (ItemModel) redisTemplate.opsForValue().get("item_validate_" + id);
+        if (itemModel == null) {
+            itemModel = this.getItemById(id);
+            redisTemplate.opsForValue().set("item_validate_" + id,itemModel);
+            redisTemplate.expire("item_validate_" + id,10, TimeUnit.MINUTES);
+        }
+        return itemModel;
     }
 
     private ItemModel convertModelFromDataObject(ItemDO itemDO, ItemStockDO itemStockDO) {
