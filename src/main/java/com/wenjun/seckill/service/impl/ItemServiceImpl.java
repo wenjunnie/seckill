@@ -2,8 +2,10 @@ package com.wenjun.seckill.service.impl;
 
 import com.wenjun.seckill.dao.ItemDOMapper;
 import com.wenjun.seckill.dao.ItemStockDOMapper;
+import com.wenjun.seckill.dao.StockLogDOMapper;
 import com.wenjun.seckill.dataobject.ItemDO;
 import com.wenjun.seckill.dataobject.ItemStockDO;
+import com.wenjun.seckill.dataobject.StockLogDO;
 import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.mq.MqProducer;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -39,6 +42,9 @@ public class ItemServiceImpl implements ItemService {
 
     @Autowired
     private ItemStockDOMapper itemStockDOMapper;
+
+    @Autowired
+    private StockLogDOMapper stockLogDOMapper;
 
     @Autowired
     private PromoService promoService;
@@ -159,6 +165,19 @@ public class ItemServiceImpl implements ItemService {
             redisTemplate.expire("item_validate_" + id,10, TimeUnit.MINUTES);
         }
         return itemModel;
+    }
+
+    @Override
+    @Transactional
+    //初始化对应的库存流水
+    public String initStockLog(Integer itemId, Integer amount) {
+        StockLogDO stockLogDO = new StockLogDO();
+        stockLogDO.setStockLogId(UUID.randomUUID().toString().replace("-",""));
+        stockLogDO.setItemId(itemId);
+        stockLogDO.setAmount(amount);
+        stockLogDO.setStatus(1);
+        stockLogDOMapper.insertSelective(stockLogDO);
+        return stockLogDO.getStockLogId();
     }
 
     private ItemModel convertModelFromDataObject(ItemDO itemDO, ItemStockDO itemStockDO) {

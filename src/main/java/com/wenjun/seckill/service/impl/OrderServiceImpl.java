@@ -2,8 +2,10 @@ package com.wenjun.seckill.service.impl;
 
 import com.wenjun.seckill.dao.OrderDOMapper;
 import com.wenjun.seckill.dao.SequenceDOMapper;
+import com.wenjun.seckill.dao.StockLogDOMapper;
 import com.wenjun.seckill.dataobject.OrderDO;
 import com.wenjun.seckill.dataobject.SequenceDO;
+import com.wenjun.seckill.dataobject.StockLogDO;
 import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.service.CacheService;
@@ -44,6 +46,9 @@ public class OrderServiceImpl implements OrderService {
     private SequenceDOMapper sequenceDOMapper;
 
     @Autowired
+    private StockLogDOMapper stockLogDOMapper;
+
+    @Autowired
     private CacheService cacheService;
 
     @Autowired
@@ -51,7 +56,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderModel createOrder(Integer userId, Integer itemId, Integer amount, Integer promoId) throws BusinessException {
+    public OrderModel createOrder(Integer userId, Integer itemId, Integer amount, Integer promoId, String stockLogId) throws BusinessException {
         //校验下单状态
 //        ItemModel itemModel = itemService.getItemById(itemId);
         ItemModel itemModel = itemService.getItemByIdInCache(itemId);
@@ -106,6 +111,13 @@ public class OrderServiceImpl implements OrderService {
         orderDOMapper.insertSelective(orderDO);
         //商品销量增加
         itemService.increaseSales(itemId,amount);
+        //设置库存流水状态为成功
+        StockLogDO stockLogDO = stockLogDOMapper.selectByPrimaryKey(stockLogId);
+        if (stockLogDO == null) {
+            throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
+        }
+        stockLogDO.setStatus(2);
+        stockLogDOMapper.updateByPrimaryKeySelective(stockLogDO);
 
 //        MySQL commit后再发送消息，因为消息可能发送失败，导致MySQL没回滚，所以引入RocketMQ事务型消息，有了RocketMQ事务型消息后就不需要了
 //        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
