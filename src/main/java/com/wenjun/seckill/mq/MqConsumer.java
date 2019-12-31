@@ -46,6 +46,7 @@ public class MqConsumer {
             public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> list, ConsumeConcurrentlyContext consumeConcurrentlyContext) {
                 //实现库存真正到数据库内扣减的逻辑
                 Message message = list.get(0);
+                //message.getBody()即为MqProducer中的bodyMap
                 String jsonString = new String(message.getBody());
                 Map<String,Object> map = JSON.parseObject(jsonString,Map.class);
                 Integer itemId = (Integer) map.get("itemId");

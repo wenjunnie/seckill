@@ -2,6 +2,7 @@ package com.wenjun.seckill.controller;
 
 import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
+import com.wenjun.seckill.mq.MqProducer;
 import com.wenjun.seckill.response.CommonReturnType;
 import com.wenjun.seckill.service.OrderService;
 import com.wenjun.seckill.service.model.OrderModel;
@@ -29,7 +30,10 @@ public class OrderController {
     private HttpServletRequest httpServletRequest;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<Object,Object> redisTemplate;
+
+    @Autowired
+    private MqProducer mqProducer;
 
     @PostMapping(value = "/createorder")
     public CommonReturnType createOrder(@RequestParam(name = "itemId") Integer itemId,
@@ -50,7 +54,11 @@ public class OrderController {
         if (userModel == null) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登录,不能下单");
         }
-        OrderModel orderModel = orderService.createOrder(userModel.getId(),itemId,amount,promoId);
-        return CommonReturnType.create(orderModel);
+        //OrderModel orderModel = orderService.createOrder(userModel.getId(),itemId,amount,promoId);
+        //使用RocketMQ事务型消息下单
+        if (!mqProducer.transactionAsyncReduceStock(userModel.getId(),itemId,amount,promoId)) {
+            throw new BusinessException(EmBusinessError.UNKNOWN_ERROR,"下单失败");
+        }
+        return CommonReturnType.create("下单成功");
     }
 }

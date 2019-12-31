@@ -106,6 +106,19 @@ public class OrderServiceImpl implements OrderService {
         orderDOMapper.insertSelective(orderDO);
         //商品销量增加
         itemService.increaseSales(itemId,amount);
+
+//        MySQL commit后再发送消息，因为消息可能发送失败，导致MySQL没回滚，所以引入RocketMQ事务型消息，有了RocketMQ事务型消息后就不需要了
+//        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+//            @Override
+//            public void afterCommit() {
+//                //异步更新库存（防止交易失败库存却扣减了）
+//                boolean mqResult = itemService.asyncDecreaseStock(itemId,amount);
+////                if (!mqResult) {
+////                    itemService.increaseStockInRedis(itemId,amount);
+////                    throw new BusinessException(EmBusinessError.MQ_SENT_FAIL);
+////                }
+//            }
+//        });
         //删除Guava Cache中缓存
         cacheService.deleteCommonCache("item_" + itemId);
         //删除Redis中商品详情缓存

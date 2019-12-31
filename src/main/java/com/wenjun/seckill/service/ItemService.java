@@ -20,6 +20,10 @@ public interface ItemService {
     boolean decreaseStock(Integer itemId,Integer amount);
     //下单后在Redis中减库存
     boolean decreaseStockInRedis(Integer itemId,Integer amount);
+    //库存回滚
+    boolean increaseStockInRedis(Integer itemId,Integer amount);
+    //通过RocketMQ异步减库存
+    boolean asyncDecreaseStock(Integer itemId,Integer amount);
     //下单后增销量
     void increaseSales(Integer itemId,Integer amount);
     //item及promo model缓存模型
