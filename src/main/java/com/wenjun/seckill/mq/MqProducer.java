@@ -105,6 +105,7 @@ public class MqProducer {
         Map<String,Object> bodyMap = new HashMap<>();
         bodyMap.put("itemId",itemId);
         bodyMap.put("amount",amount);
+        bodyMap.put("promoId",promoId);
         bodyMap.put("stockLogId",stockLogId);
 
         Map<String,Object> argsMap = new HashMap<>();

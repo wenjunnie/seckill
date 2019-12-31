@@ -6,7 +6,6 @@ import com.wenjun.seckill.mq.MqProducer;
 import com.wenjun.seckill.response.CommonReturnType;
 import com.wenjun.seckill.service.ItemService;
 import com.wenjun.seckill.service.OrderService;
-import com.wenjun.seckill.service.model.OrderModel;
 import com.wenjun.seckill.service.model.UserModel;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,9 +53,14 @@ public class OrderController {
         }
         //获取用户登录信息
         //UserModel userModel = (UserModel) httpServletRequest.getSession().getAttribute("LOGIN_USER");
-        UserModel userModel = (UserModel) redisTemplate.opsForValue().get(token);
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get("token_" + token);
         if (userModel == null) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登录,不能下单");
+        }
+
+        //判断库存是否已售罄，若对应售罄的key存在，则直接返回下单失败
+        if (redisTemplate.hasKey("promo_item_stock_invalid_" + itemId)) {
+            throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
         }
 
         //加入库存流水init状态

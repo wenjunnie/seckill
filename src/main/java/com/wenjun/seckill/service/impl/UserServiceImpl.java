@@ -11,8 +11,6 @@ import com.wenjun.seckill.service.UserService;
 import com.wenjun.seckill.service.model.UserModel;
 import com.wenjun.seckill.validator.ValidationResult;
 import com.wenjun.seckill.validator.ValidatorImpl;
-import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;

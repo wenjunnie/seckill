@@ -123,13 +123,18 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public boolean decreaseStockInRedis(Integer itemId, Integer amount) {
         long result = redisTemplate.opsForValue().decrement("promo_item_stock_" + itemId,amount);
-        if (result >= 0) {
+        if (result > 0) {
             //更新库存成功
 //            boolean mqResult = mqProducer.asyncReduceStock(itemId,amount);
 //            if (!mqResult) {
 //                redisTemplate.opsForValue().increment("promo_item_stock_" + itemId,amount);
 //                return false;
 //            }
+            return true;
+        } else if (result == 0) {
+            //打上库存已售罄的标识
+            redisTemplate.opsForValue().set("promo_item_stock_invalid_" + itemId,"true");
+            //更新库存成功
             return true;
         } else {
             //更新库存失败（amount数量过多）

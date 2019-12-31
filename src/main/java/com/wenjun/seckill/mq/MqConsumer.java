@@ -51,8 +51,11 @@ public class MqConsumer {
                 Map<String,Object> map = JSON.parseObject(jsonString,Map.class);
                 Integer itemId = (Integer) map.get("itemId");
                 Integer amount = (Integer) map.get("amount");
+                Integer promoId = (Integer) map.get("promoId");
 
-                itemStockDOMapper.decreaseStock(itemId,amount);
+                if (promoId != null) {//防止非秒杀商品扣减两次库存
+                    itemStockDOMapper.decreaseStock(itemId, amount);
+                }
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
             }
         });
