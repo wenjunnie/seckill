@@ -6,12 +6,17 @@ import com.wenjun.seckill.dataobject.ItemDO;
 import com.wenjun.seckill.dataobject.ItemStockDO;
 import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
+import com.wenjun.seckill.mq.MqProducer;
 import com.wenjun.seckill.service.ItemService;
 import com.wenjun.seckill.service.PromoService;
 import com.wenjun.seckill.service.model.ItemModel;
 import com.wenjun.seckill.service.model.PromoModel;
 import com.wenjun.seckill.validator.ValidationResult;
 import com.wenjun.seckill.validator.ValidatorImpl;
+import org.apache.rocketmq.client.exception.MQBrokerException;
+import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -44,6 +49,9 @@ public class ItemServiceImpl implements ItemService {
 
     @Autowired
     private RedisTemplate<Object,Object> redisTemplate;
+
+    @Autowired
+    private MqProducer mqProducer;
 
     @Override
     @Transactional
@@ -112,11 +120,18 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public boolean decreaseStockInRedis(Integer itemId, Integer amount) {
-        long result = redisTemplate.opsForValue().decrement("promo_item_stock" + itemId,amount);
+        long result = redisTemplate.opsForValue().decrement("promo_item_stock_" + itemId,amount);
         if (result >= 0) {
+            //更新库存成功
+            boolean mqResult = mqProducer.asyncReduceStock(itemId,amount);
+            if (!mqResult) {
+                redisTemplate.opsForValue().increment("promo_item_stock_" + itemId,amount);
+                return false;
+            }
             return true;
         } else {
-            redisTemplate.delete("promo_item_stock" + itemId);
+            //更新库存失败（amount数量过多）
+            redisTemplate.opsForValue().increment("promo_item_stock_" + itemId,amount);
             return false;
         }
     }

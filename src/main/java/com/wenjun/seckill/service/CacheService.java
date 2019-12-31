@@ -10,4 +10,6 @@ public interface CacheService {
     void setCommonCache(String key,Object value);
     //取方法
     Object getFromCommonCache(String key);
+    //删除某个缓存
+    void deleteCommonCache(String key);
 }

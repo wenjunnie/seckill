@@ -37,4 +37,9 @@ public class CacheServiceImpl implements CacheService {
     public Object getFromCommonCache(String key) {
         return commonCache.getIfPresent(key);
     }
+
+    @Override
+    public void deleteCommonCache(String key) {
+        commonCache.invalidate(key);
+    }
 }

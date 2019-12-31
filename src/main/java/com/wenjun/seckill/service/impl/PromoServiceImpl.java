@@ -59,7 +59,7 @@ public class PromoServiceImpl implements PromoService {
         }
         ItemModel itemModel = itemService.getItemById(promoDO.getItemId());
         //将库存同步到Redis内
-        redisTemplate.opsForValue().set("promo_item_stock" + itemModel.getId(),itemModel.getStock());
+        redisTemplate.opsForValue().set("promo_item_stock_" + itemModel.getId(),itemModel.getStock());
     }
 
     private PromoModel convertFromDataObject(PromoDO promoDO) {

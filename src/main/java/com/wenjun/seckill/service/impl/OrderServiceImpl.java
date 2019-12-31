@@ -6,6 +6,7 @@ import com.wenjun.seckill.dataobject.OrderDO;
 import com.wenjun.seckill.dataobject.SequenceDO;
 import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
+import com.wenjun.seckill.service.CacheService;
 import com.wenjun.seckill.service.ItemService;
 import com.wenjun.seckill.service.OrderService;
 import com.wenjun.seckill.service.UserService;
@@ -14,6 +15,7 @@ import com.wenjun.seckill.service.model.OrderModel;
 import com.wenjun.seckill.service.model.UserModel;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private SequenceDOMapper sequenceDOMapper;
+
+    @Autowired
+    private CacheService cacheService;
+
+    @Autowired
+    private RedisTemplate<Object,Object> redisTemplate;
 
     @Override
     @Transactional
@@ -98,6 +106,10 @@ public class OrderServiceImpl implements OrderService {
         orderDOMapper.insertSelective(orderDO);
         //商品销量增加
         itemService.increaseSales(itemId,amount);
+        //删除Guava Cache中缓存
+        cacheService.deleteCommonCache("item_" + itemId);
+        //删除Redis中商品详情缓存
+        redisTemplate.delete("item_" + itemId);
         //返回前端
         return orderModel;
     }
