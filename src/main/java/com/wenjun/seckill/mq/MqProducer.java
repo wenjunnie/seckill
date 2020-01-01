@@ -78,7 +78,7 @@ public class MqProducer {
             }
 
             @Override
-            //executeLocalTransaction长时间没有发送消息状态时调用（可能执行中挂掉了，也可能还未执行完）
+            //executeLocalTransaction方法长时间没有发送消息状态时调用（可能执行中挂掉了，也可能还未执行完）
             public LocalTransactionState checkLocalTransaction(MessageExt messageExt) {
                 //根据是否扣减库存成功，来判断要返回COMMIT_MESSAGE还是ROLLBACK_MESSAGE还是继续UNKNOW
                 //messageExt.getBody()即为MqProducer中的bodyMap

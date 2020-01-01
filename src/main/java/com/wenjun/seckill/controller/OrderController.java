@@ -13,7 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.*;
 
 /**
  * @Author: wenjun
@@ -41,6 +43,13 @@ public class OrderController {
 
     @Autowired
     private MqProducer mqProducer;
+
+    private ExecutorService executorService;
+
+    @PostConstruct
+    public void init() {
+        executorService = Executors.newFixedThreadPool(20);
+    }
 
     //生成秒杀令牌
     @PostMapping(value = "/generatetoken")
@@ -99,20 +108,36 @@ public class OrderController {
             }
         }
 
-        //判断库存是否已售罄，若对应售罄的key存在，则直接返回下单失败
-        if (redisTemplate.hasKey("promo_item_stock_invalid_" + itemId)) {
-            throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
+        //判断库存是否已售罄，若对应售罄的key存在，则直接返回下单失败（已前置到PromoService的generatePromoToken方法中）
+//        if (redisTemplate.hasKey("promo_item_stock_invalid_" + itemId)) {
+//            throw new BusinessException(EmBusinessError.STOCK_NOT_ENOUGH);
+//        }
+
+        //同步调用线程池的submit方法
+        //拥塞窗口为20的等待队列，用来队列化泄洪
+        Future<Object> future = executorService.submit(new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                //加入库存流水init状态
+                String stockLogId = itemService.initStockLog(itemId,amount);
+
+                //再去完成对应的下单事务型消息机制
+                //OrderModel orderModel = orderService.createOrder(userModel.getId(),itemId,amount,promoId);
+                //使用RocketMQ事务型消息下单
+                if (!mqProducer.transactionAsyncReduceStock(userModel.getId(),itemId,amount,promoId,stockLogId)) {
+                    throw new BusinessException(EmBusinessError.UNKNOWN_ERROR,"下单失败");
+                }
+                return null;
+            }
+        });
+
+        try {
+            future.get();
+        } catch (InterruptedException | ExecutionException e) {//线程执行出现问题
+            e.printStackTrace();
+            throw new BusinessException(EmBusinessError.UNKNOWN_ERROR);
         }
 
-        //加入库存流水init状态
-        String stockLogId = itemService.initStockLog(itemId,amount);
-
-        //再去完成对应的下单事务型消息机制
-        //OrderModel orderModel = orderService.createOrder(userModel.getId(),itemId,amount,promoId);
-        //使用RocketMQ事务型消息下单
-        if (!mqProducer.transactionAsyncReduceStock(userModel.getId(),itemId,amount,promoId,stockLogId)) {
-            throw new BusinessException(EmBusinessError.UNKNOWN_ERROR,"下单失败");
-        }
         return CommonReturnType.create("下单成功");
     }
 }
