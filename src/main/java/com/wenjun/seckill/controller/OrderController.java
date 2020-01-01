@@ -1,5 +1,6 @@
 package com.wenjun.seckill.controller;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.wenjun.seckill.enums.EmBusinessError;
 import com.wenjun.seckill.error.BusinessException;
 import com.wenjun.seckill.mq.MqProducer;
@@ -52,9 +53,12 @@ public class OrderController {
 
     private ExecutorService executorService;
 
+    private RateLimiter orderCreateRateLimiter;
+
     @PostConstruct
     public void init() {
         executorService = Executors.newFixedThreadPool(20);
+        orderCreateRateLimiter = RateLimiter.create(300);
     }
 
     //生成验证码并写入HttpResponse和Redis中（防刷）
@@ -118,6 +122,10 @@ public class OrderController {
                                         @RequestParam(name = "amount") Integer amount,
                                         @RequestParam(name = "promoId", required = false) Integer promoId,
                                         @RequestParam(name = "promoToken", required = false) String promoToken) throws BusinessException {
+        //令牌桶限流
+        if (orderCreateRateLimiter.acquire() <= 0) {//获取令牌桶中剩余令牌数
+            throw new BusinessException(EmBusinessError.RATE_LIMIT);
+        }
         //判断用户是否登录
 //        Boolean isLogin = (Boolean) httpServletRequest.getSession().getAttribute("IS_LOGIN");//Session方案
 //        if (isLogin == null || !isLogin) {
