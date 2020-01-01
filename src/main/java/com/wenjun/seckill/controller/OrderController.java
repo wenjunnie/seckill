@@ -8,13 +8,19 @@ import com.wenjun.seckill.service.ItemService;
 import com.wenjun.seckill.service.OrderService;
 import com.wenjun.seckill.service.PromoService;
 import com.wenjun.seckill.service.model.UserModel;
+import com.wenjun.seckill.util.CodeUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.PostConstruct;
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.awt.image.RenderedImage;
+import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.*;
 
 /**
@@ -51,10 +57,30 @@ public class OrderController {
         executorService = Executors.newFixedThreadPool(20);
     }
 
+    //生成验证码并写入HttpResponse和Redis中（防刷）
+    @GetMapping(value = "/generateverifycode")
+    public void generateVerifyCode(HttpServletResponse response) throws BusinessException, IOException {
+        //验证用户登录态
+        String token = httpServletRequest.getParameterMap().get("token")[0];
+        if (StringUtils.isEmpty(token)) {
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登录,不能生成验证码");
+        }
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get("token_" + token);
+        if (userModel == null) {
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户登录已过期,不能生成验证码");
+        }
+        //创建文件输出流对象
+        Map<String,Object> map = CodeUtil.generateCodeAndPic();
+        redisTemplate.opsForValue().set("verify_code_" + userModel.getId(),map.get("code"));
+        redisTemplate.expire("verify_code_" + userModel.getId(),5,TimeUnit.MINUTES);
+        ImageIO.write((RenderedImage) map.get("codePic"),"jpeg",response.getOutputStream());
+    }
+
     //生成秒杀令牌
     @PostMapping(value = "/generatetoken")
     public CommonReturnType createOrder(@RequestParam(name = "itemId") Integer itemId,
-                                        @RequestParam(name = "promoId") Integer promoId) throws BusinessException {
+                                        @RequestParam(name = "promoId") Integer promoId,
+                                        @RequestParam(name = "verifyCode", required = false) String verifyCode) throws BusinessException {
         //根据token获取用户信息
         String token = httpServletRequest.getParameterMap().get("token")[0];
         if (StringUtils.isEmpty(token)) {
@@ -69,6 +95,14 @@ public class OrderController {
         //若为非秒杀商品
         if (promoId == null) {
             return CommonReturnType.create(null);
+        }
+        //通过verifyCode验证验证码有效性
+        String redisVerifyCode = (String) redisTemplate.opsForValue().get("verify_code_" + userModel.getId());
+        if (redisVerifyCode == null) {
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"请求非法");
+        }
+        if (!StringUtils.equalsIgnoreCase(verifyCode,redisVerifyCode)) {
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"请求非法，验证码错误");
         }
         //获取秒杀令牌
         String promoToken = promoService.generatePromoToken(promoId,userModel.getId(),itemId);

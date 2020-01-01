@@ -120,7 +120,7 @@ public class UserController {
         uuidToken = uuidToken.replace("-","");
         //建立token和用户登录态之间的联系
         redisTemplate.opsForValue().set("token_" + uuidToken,userModel);
-        redisTemplate.expire(uuidToken,1,TimeUnit.HOURS);
+        redisTemplate.expire("token_" + uuidToken,1,TimeUnit.HOURS);
         //下发token给前端
         return CommonReturnType.create(uuidToken);
     }
