@@ -6,6 +6,7 @@ import com.wenjun.seckill.mq.MqProducer;
 import com.wenjun.seckill.response.CommonReturnType;
 import com.wenjun.seckill.service.ItemService;
 import com.wenjun.seckill.service.OrderService;
+import com.wenjun.seckill.service.PromoService;
 import com.wenjun.seckill.service.model.UserModel;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ public class OrderController {
     private ItemService itemService;
 
     @Autowired
+    private PromoService promoService;
+
+    @Autowired
     private HttpServletRequest httpServletRequest;
 
     @Autowired
@@ -38,12 +42,41 @@ public class OrderController {
     @Autowired
     private MqProducer mqProducer;
 
+    //生成秒杀令牌
+    @PostMapping(value = "/generatetoken")
+    public CommonReturnType createOrder(@RequestParam(name = "itemId") Integer itemId,
+                                        @RequestParam(name = "promoId") Integer promoId) throws BusinessException {
+        //根据token获取用户信息
+        String token = httpServletRequest.getParameterMap().get("token")[0];
+        if (StringUtils.isEmpty(token)) {
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登录,不能下单");
+        }
+        //获取用户登录信息
+        //UserModel userModel = (UserModel) httpServletRequest.getSession().getAttribute("LOGIN_USER");
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get("token_" + token);
+        if (userModel == null) {
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户登录已过期,请重新登录");
+        }
+        //若为非秒杀商品
+        if (promoId == null) {
+            return CommonReturnType.create(null);
+        }
+        //获取秒杀令牌
+        String promoToken = promoService.generatePromoToken(promoId,userModel.getId(),itemId);
+        if (promoToken == null) {
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"生成令牌失败");
+        }
+        return CommonReturnType.create(promoToken);
+    }
+
+    //封装下单请求
     @PostMapping(value = "/createorder")
     public CommonReturnType createOrder(@RequestParam(name = "itemId") Integer itemId,
                                         @RequestParam(name = "amount") Integer amount,
-                                        @RequestParam(name = "promoId", required = false) Integer promoId) throws BusinessException {
+                                        @RequestParam(name = "promoId", required = false) Integer promoId,
+                                        @RequestParam(name = "promoToken", required = false) String promoToken) throws BusinessException {
         //判断用户是否登录
-//        Boolean isLogin = (Boolean) httpServletRequest.getSession().getAttribute("IS_LOGIN");
+//        Boolean isLogin = (Boolean) httpServletRequest.getSession().getAttribute("IS_LOGIN");//Session方案
 //        if (isLogin == null || !isLogin) {
 //            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登录,不能下单");
 //        }
@@ -55,7 +88,15 @@ public class OrderController {
         //UserModel userModel = (UserModel) httpServletRequest.getSession().getAttribute("LOGIN_USER");
         UserModel userModel = (UserModel) redisTemplate.opsForValue().get("token_" + token);
         if (userModel == null) {
-            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登录,不能下单");
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户登录已过期,请重新登录");
+        }
+
+        //校验秒杀令牌
+        if (promoId != null) {
+            String inRedisPromoToken = (String) redisTemplate.opsForValue().get("promo_token_" + promoId + "_userId_" + userModel.getId() + "_itemId_" + itemId);
+            if (inRedisPromoToken == null || !StringUtils.equals(promoToken,inRedisPromoToken)) {
+                throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"秒杀令牌校验失败");
+            }
         }
 
         //判断库存是否已售罄，若对应售罄的key存在，则直接返回下单失败

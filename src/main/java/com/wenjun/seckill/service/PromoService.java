@@ -11,4 +11,6 @@ public interface PromoService {
     PromoModel getPromoByItemId(Integer itemId);
     //秒杀活动发布时同步库存到缓存
     void publishPromo(Integer promoId);
+    //生成秒杀令牌
+    String generatePromoToken(Integer promoId, Integer userId, Integer itemId);
 }
