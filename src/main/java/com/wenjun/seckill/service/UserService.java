@@ -17,5 +17,9 @@ public interface UserService {
     UserModel getUserByIdInCache(Integer id);
     void register(UserModel userModel) throws BusinessException;
     //判断登录是否合法
-    UserModel validateLogin(String telphone, String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException;
+    UserModel validateLogin(String telphone, String password) throws BusinessException;
+    //校验用户是否已注册
+    UserModel getUserByTelphone(String telphone) throws BusinessException;
+    //修改密码
+    boolean changePassword(UserModel userModel);
 }

@@ -12,6 +12,7 @@ public enum EmBusinessError implements CommonError {
     USER_NOT_EXIT(20001,"用户不存在"),
     USER_LOGIN_FAIL(20002,"用户或密码不正确"),
     USER_NOT_LOGIN(20003,"用户还未登录"),
+    FIND_PASSWORD_FAIL(20004,"找回密码失败"),
     STOCK_NOT_ENOUGH(30001,"库存不足"),
     MQ_SENT_FAIL(30002,"库存异步消息投放失败"),
     RATE_LIMIT(30003,"活动太火爆，请稍后再试"),

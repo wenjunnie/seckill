@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import sun.misc.BASE64Encoder;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -66,6 +65,8 @@ public class UserController {
         //将otp验证码与手机号关联（通过session）
         httpServletRequest.getSession().setAttribute("telphone",telphone);
         httpServletRequest.getSession().setAttribute("otpCode",otpCode);
+        //设置session过期时间为十分钟
+        httpServletRequest.getSession().setMaxInactiveInterval(600);
         //将otp验证码通过短信发送给用户，省略
         AliyunMessageUtil.sendMsg(telphone,otpCode);
         System.out.println("telphone= " + telphone + " otpCode= " + otpCode);
@@ -79,7 +80,7 @@ public class UserController {
                                      @RequestParam(name = "name") String name,
                                      @RequestParam(name = "gender") Byte gender,
                                      @RequestParam(name = "age") Integer age,
-                                     @RequestParam(name = "password") String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+                                     @RequestParam(name = "password") String password) throws BusinessException {
         String inSessionOtpCode = (String) httpServletRequest.getSession().getAttribute("otpCode");
         if (!StringUtils.equals(otpCode,inSessionOtpCode)) {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"短信验证码不符合");
@@ -105,7 +106,7 @@ public class UserController {
     //用户登录接口
     @GetMapping(value = "/login")
     public CommonReturnType login(@RequestParam(name = "telphone") String telphone,
-                                  @RequestParam(name = "password") String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+                                  @RequestParam(name = "password") String password) throws BusinessException {
         if (StringUtils.isEmpty(telphone) || StringUtils.isEmpty(password)) {
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
         }
@@ -123,6 +124,25 @@ public class UserController {
         redisTemplate.expire("token_" + uuidToken,1,TimeUnit.HOURS);
         //下发token给前端
         return CommonReturnType.create(uuidToken);
+    }
+
+    //用户找回密码接口
+    @PostMapping(value = "/findpassword")
+    public CommonReturnType findPassword(@RequestParam(name = "telphone") String telphone,
+                                     @RequestParam(name = "code") String code,
+                                     @RequestParam(name = "password") String password) throws BusinessException {
+        String inSessionOtpCode = (String) httpServletRequest.getSession().getAttribute("otpCode");
+        if (!StringUtils.equals(code,inSessionOtpCode)) {
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR,"短信验证码不符合");
+        }
+        UserModel userModel = userService.getUserByTelphone(telphone);
+        String encrptPassword = BCrypt.hashpw(password,BCrypt.gensalt());
+        userModel.setEncrptPassword(encrptPassword);
+        boolean result = userService.changePassword(userModel);
+        if (!result) {
+            throw new BusinessException(EmBusinessError.FIND_PASSWORD_FAIL);
+        }
+        return CommonReturnType.create("找回密码成功");
     }
 
     /**

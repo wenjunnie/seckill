@@ -18,8 +18,6 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -89,19 +87,12 @@ public class UserServiceImpl implements UserService {
         userModel.setId(userDO.getId() );
         UserPasswordDO userPasswordDO = convertPasswordFromModel(userModel);
         userPasswordDOMapper.insertSelective(userPasswordDO);
-
-        return;
     }
 
     @Override
-    public UserModel validateLogin(String telphone, String password) throws BusinessException, UnsupportedEncodingException, NoSuchAlgorithmException {
+    public UserModel validateLogin(String telphone, String password) throws BusinessException {
         //获取用户信息
-        UserDO userDO = userDOMapper.selectByTelphone(telphone);
-        if (userDO == null) {
-            throw new BusinessException(EmBusinessError.USER_LOGIN_FAIL);
-        }
-        UserPasswordDO userPasswordDO = userPasswordDOMapper.selectByUserId(userDO.getId());
-        UserModel userModel = convertFromDataObject(userDO,userPasswordDO);
+        UserModel userModel = getUserByTelphone(telphone);
         //校验密码
 //        String encodePassword = userController.EncodeByMd5(password);
 //        if (!StringUtils.equals(encodePassword,userPasswordDO.getEncrptPassword())) {
@@ -112,6 +103,25 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(EmBusinessError.USER_LOGIN_FAIL);
         }
         return userModel;
+    }
+
+    @Override
+    public UserModel getUserByTelphone(String telphone) throws BusinessException {
+        UserDO userDO = userDOMapper.selectByTelphone(telphone);
+        if (userDO == null) {
+            throw new BusinessException(EmBusinessError.USER_LOGIN_FAIL);
+        }
+        UserPasswordDO userPasswordDO = userPasswordDOMapper.selectByUserId(userDO.getId());
+        return convertFromDataObject(userDO,userPasswordDO);
+    }
+
+    @Override
+    @Transactional
+    public boolean changePassword(UserModel userModel) {
+        UserPasswordDO userPasswordDO = new UserPasswordDO();
+        userPasswordDO.setUserId(userModel.getId());
+        userPasswordDO.setEncrptPassword(userModel.getEncrptPassword());
+        return userPasswordDOMapper.updateByTelphone(userPasswordDO);
     }
 
     private UserModel convertFromDataObject(UserDO userDO, UserPasswordDO userPasswordDO) {

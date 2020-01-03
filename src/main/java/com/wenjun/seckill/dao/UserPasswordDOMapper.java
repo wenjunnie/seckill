@@ -54,4 +54,6 @@ public interface UserPasswordDOMapper {
     int updateByPrimaryKey(UserPasswordDO record);
 
     UserPasswordDO selectByUserId(Integer userId);
+
+    boolean updateByTelphone(UserPasswordDO record);
 }

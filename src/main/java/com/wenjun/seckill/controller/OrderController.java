@@ -123,7 +123,7 @@ public class OrderController {
                                         @RequestParam(name = "promoId", required = false) Integer promoId,
                                         @RequestParam(name = "promoToken", required = false) String promoToken) throws BusinessException {
         //令牌桶限流
-        if (orderCreateRateLimiter.acquire() <= 0) {//获取令牌桶中剩余令牌数
+        if (orderCreateRateLimiter.acquire() > 0) {//默认从令牌桶中获取1个令牌需要被阻塞的时间
             throw new BusinessException(EmBusinessError.RATE_LIMIT);
         }
         //判断用户是否登录
