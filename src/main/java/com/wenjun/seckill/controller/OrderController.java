@@ -21,7 +21,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 /**
@@ -50,6 +52,9 @@ public class OrderController {
 
     @Autowired
     private MqProducer mqProducer;
+
+    @Autowired
+    private UserController userController;
 
     private ExecutorService executorService;
 
@@ -117,11 +122,12 @@ public class OrderController {
     }
 
     //封装下单请求
-    @PostMapping(value = "/createorder")
+    @PostMapping(value = "/{path}/createorder")
     public CommonReturnType createOrder(@RequestParam(name = "itemId") Integer itemId,
                                         @RequestParam(name = "amount") Integer amount,
                                         @RequestParam(name = "promoId", required = false) Integer promoId,
-                                        @RequestParam(name = "promoToken", required = false) String promoToken) throws BusinessException {
+                                        @RequestParam(name = "promoToken", required = false) String promoToken,
+                                        @PathVariable("path") String path) throws BusinessException {
         //令牌桶限流
         if (orderCreateRateLimiter.acquire() > 0) {//默认从令牌桶中获取1个令牌需要被阻塞的时间
             throw new BusinessException(EmBusinessError.RATE_LIMIT);
@@ -141,7 +147,11 @@ public class OrderController {
         if (userModel == null) {
             throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户登录已过期,请重新登录");
         }
-
+        //判断秒杀链接是否正确
+        String pathInRedis = (String) redisTemplate.opsForValue().get("path_userId_" + userModel.getId() + "_itemId_" + itemId);
+        if (pathInRedis == null || !StringUtils.equals(pathInRedis,path)) {
+            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
+        }
         //校验秒杀令牌
         if (promoId != null) {
             String inRedisPromoToken = (String) redisTemplate.opsForValue().get("promo_token_" + promoId + "_userId_" + userModel.getId() + "_itemId_" + itemId);
@@ -181,5 +191,22 @@ public class OrderController {
         }
 
         return CommonReturnType.create("下单成功");
+    }
+
+    //秒杀接口隐藏
+    @GetMapping(value = "/path")
+    public CommonReturnType path(@RequestParam(name = "itemId") Integer itemId) throws BusinessException, NoSuchAlgorithmException {
+        String token = httpServletRequest.getParameterMap().get("token")[0];
+        if (StringUtils.isEmpty(token)) {
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户还未登录,不能下单");
+        }
+        UserModel userModel = (UserModel) redisTemplate.opsForValue().get("token_" + token);
+        if (userModel == null) {
+            throw new BusinessException(EmBusinessError.USER_NOT_LOGIN,"用户登录已过期,请重新登录");
+        }
+        String path = userController.EncodeByMd5(UUID.randomUUID().toString()).replace("/","-");
+        redisTemplate.opsForValue().set("path_userId_" + userModel.getId() + "_itemId_" + itemId,path);
+        redisTemplate.expire("path_userId_" + userModel.getId() + "_itemId_" + itemId,60,TimeUnit.SECONDS);
+        return CommonReturnType.create(path);
     }
 }

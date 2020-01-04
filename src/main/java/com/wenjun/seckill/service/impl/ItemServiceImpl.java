@@ -80,6 +80,15 @@ public class ItemServiceImpl implements ItemService {
         List<ItemDO> itemDOList = itemDOMapper.listItem();
         List<ItemModel> itemModelList = itemDOList.stream().map(itemDO -> {
             ItemStockDO itemStockDO = itemStockDOMapper.selectByItemId(itemDO.getId());
+            PromoModel promoModel = promoService.getPromoByItemId(itemDO.getId());
+            if (promoModel != null) {
+                if (promoModel.getStatus() == 1) {
+                    itemDO.setTitle(itemDO.getTitle() + "（秒杀即将开始！）");
+                } else if (promoModel.getStatus() == 2) {
+                    itemDO.setTitle(itemDO.getTitle() + "（秒杀进行中！）");
+                }
+                itemDO.setPrice(promoModel.getPromoPrice().doubleValue());
+            }
             ItemModel itemModel = this.convertModelFromDataObject(itemDO,itemStockDO);
             return itemModel;
         }).collect(Collectors.toList());
