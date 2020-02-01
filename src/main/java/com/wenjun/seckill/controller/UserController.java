@@ -69,8 +69,8 @@ public class UserController {
         httpServletRequest.getSession().setMaxInactiveInterval(600);
         //将otp验证码通过短信发送给用户，省略
         AliyunMessageUtil.sendMsg(telphone,otpCode);
-        System.out.println("telphone= " + telphone + " otpCode= " + otpCode);
-        return CommonReturnType.create("验证码发送成功");
+        System.out.println("telphone = " + telphone + " otpCode = " + otpCode);
+        return CommonReturnType.create("验证码发送成功，请查收");
     }
 
     //用户注册接口

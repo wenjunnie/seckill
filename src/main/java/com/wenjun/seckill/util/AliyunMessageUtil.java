@@ -26,8 +26,8 @@ public class AliyunMessageUtil {
     private static final String domain = "dysmsapi.aliyuncs.com";
 
     // 此处需要替换成开发者自己的AK(在阿里云访问控制台寻找)
-    private static final String accessKeyId = "LTAIHH8KHkrNZnmb";
-    private static final String accessKeySecret = "ekJgBBIdrT4R5PMNSFfSbrGuYXg0o1";
+    private static final String accessKeyId = "LTAI4FrCsHhQyPfv9m6kKFHx";
+    private static final String accessKeySecret = "ilq3zyCbC4tD1IM3vGiZQqSs8Zd6R8";
 
     public static SendSmsResponse sendSms(Map<String, String> paramMap) throws com.aliyuncs.exceptions.ClientException {
 
@@ -60,8 +60,8 @@ public class AliyunMessageUtil {
         String jsonContent = "{\"code\":\"" + randomNum + "\"}";
         Map<String, String> paramMap = new HashMap<>();
         paramMap.put("phoneNumber", uphone);
-        paramMap.put("msgSign", "知你点评");
-        paramMap.put("templateCode", "SMS_130795159");
+        paramMap.put("msgSign", "秒杀商城");
+        paramMap.put("templateCode", "SMS_182674081");
         paramMap.put("jsonContent", jsonContent);
         SendSmsResponse sendSmsResponse = sendSms(paramMap);
     }

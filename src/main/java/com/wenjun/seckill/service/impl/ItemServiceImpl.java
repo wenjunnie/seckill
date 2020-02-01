@@ -81,6 +81,9 @@ public class ItemServiceImpl implements ItemService {
         List<ItemModel> itemModelList = itemDOList.stream().map(itemDO -> {
             ItemStockDO itemStockDO = itemStockDOMapper.selectByItemId(itemDO.getId());
             PromoModel promoModel = promoService.getPromoByItemId(itemDO.getId());
+            if (promoModel == null || promoModel.getStatus() == 3) {
+                itemDO.setTitle(itemDO.getTitle() + "（暂无秒杀活动！）");
+            }
             if (promoModel != null) {
                 if (promoModel.getStatus() == 1) {
                     itemDO.setTitle(itemDO.getTitle() + "（秒杀即将开始！）");
