@@ -1,0 +1,205 @@
+rz命令上传文件
+yum install vsftpd
+yum -y install lrzsz
+chmod 777 jdk-8u231-linux-x64.rpm
+rpm -ivh jdk-8u231-linux-x64.rpm
+yum install vim
+vim ~/.bash_profile
+export JAVA_HOME=/usr/java/jdk1.8.0_231-amd64
+export PATH=$PATH:$JAVA_HOME/bin
+source ~/.bash_profile
+yum install mysql*
+====================================
+vim /etc/yum.repos.d/MariaDB.repo
+[mariadb]
+name = MariaDB
+baseurl = https://mirrors.ustc.edu.cn/mariadb/yum/10.4/centos7-amd64
+gpgkey = https://mirrors.ustc.edu.cn/mariadb/yum/RPM-GPG-KEY-MariaDB
+gpgcheck = 1
+============使用新版MariaDB，不然是MySQL 5.5
+yum install mariadb-server
+systemctl start mariadb.service
+systemctl enable mariadb.service
+mysqladmin -u root password nie970309
+mysql -uroot -pnie970309
+mysql -uroot -pnie970309 < /var/seckill/seckill.sql
+=============IDEA===============
+mvn clean package
+=============server==============
+cd /var
+mkdir seckill
+cd /seckill
+rz xxx.jar
+=============可选===============
+vim application.properties
+=============deploy脚本===========
+vim deploy.sh
+nohup java -Xms400m -Xmx400m -XX:NewSize=200m -XX:MaxNewSize=200m -jar seckill.jar --spring.config.addition
+-location=/var/seckill/application.properties
+===============================
+chmod -R 777 *
+./deploy.sh &
+=============压测===============
+ps -ef | grep java
+netstat -anp | grep 19473
+yum install psmisc -y（安装pstree）
+pstree -p 19473 | wc -l
+=============修改Tomcat配置========（提高性能）
+vim application.properties
+server.tomcat.accept-count=1000
+server.tomcat.max-threads=800
+server.tomcat.min-spare-threads=100
+=============修改域名============（windows）
+vim /etc/hosts 
+114.67.115.192   seckillserver
+=============传输数据============
+scp -r /var/seckill root@192.168.0.3:/var/
+=============测试连通性===========
+yum install telnet
+telnet 192.168.0.3 3306（会报连接被拒绝错误）
+=============进入数据库服务器=======
+mysql -uroot -pnie970309
+use mysql;
+select host,user,password from user;
+grant all privileges on *.* to root@'%' identified by 'nie970309';
+flush privileges;
+=============Nginx==============（openresty）
+chmod 777 openresty-1.15.8.2.tar.gz（/tmp）
+tar -xzvf openresty-1.15.8.2.tar.gz
+yum install pcre-devel openssl-devel gcc curl
+./configure
+make
+make install
+sbin/nginx -c conf/nginx.conf（openresty/nginx）
+=============修改配置文件==========（静态资源）
+vim conf/nginx.conf
+location /resources/ {
+            alias  /usr/local/openresty/nginx/html/resources/;
+            index  index.html index.htm;
+        }
+===============================
+mv *.html resources/
+sbin/nginx -s reload（无缝重启）
+=============修改配置文件==========（动态请求）
+vim conf/nginx.conf
+#gzip  on;
+    #（局域网地址，访问更快）
+    upstream backend_server{
+        server 192.168.0.3:8090 weight=1;
+        server 192.168.0.4:8090 weight=1;
+    }
+location / {
+            proxy_pass http://backend_server;
+            proxy_set_header Host $http_host:$proxy_port;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+sbin/nginx -s reload（无缝重启）
+=============测试===============
+http://114.67.113.84/resources/getotp.html（静态资源）
+http://114.67.113.84/（动态请求）
+=============通过Tomcat验证========
+[root@JD seckill]# mkdir tomcat
+[root@JD seckill]# chmod -R 777 tomcat/
+[root@JD seckill]# vim application.properties
+server.tomcat.accesslog.enabled=true
+server.tomcat.accesslog.directory=/var/seckill/tomcat
+server.tomcat.accesslog.pattern=%h %l %u %t "%r" %s %b %D
+ps -ef | grep java
+kill 15942
+./deploy.sh &
+cd tomcat
+tail -f access_log.2019-12-25.log
+=============Nginx与服务器长连接======
+vim conf/nginx.conf
+upstream backend_server{
+        server 192.168.0.3:8090 weight=1;
+        server 192.168.0.4:8090 weight=1;
+        keepalive 30;
+    }
+location / {
+            proxy_pass http://backend_server;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+        }
+sbin/nginx -s reload（无缝重启）
+=============Redis===============
+chmod -R 777 redis-5.0.7.tar.gz
+tar -xvzf redis-5.0.7.tar.gz
+mv redis-5.0.7 redis
+cd redis
+yum -y install gcc gcc-c++ libstdc++-devel
+make MALLOC=libc（如果make失败才执行）
+make
+make install
+cd src
+./redis-server &
+./redis-cli
+============修改Redis配置==========（防止外网访问）
+[root@JD redis-5.0.7]# vim redis.conf
+#bind 192.168.0.3
+#bind 127.0.0.1
+requirepass nie970309
+src/redis-server ./redis.conf &
+============修改Redis配置==========（防止连接不上）
+protected-mode no
+src/redis-server ./redis.conf &
+============连接Redis=============
+./redis-cli -h 192.168.0.3
+============重新部署==============
+vim application.properties
+spring.redis.host=192.168.0.3
+============lua缓存===============
+[root@JD openresty]# mkdir lua
+[root@JD lua]# vim itemredis.lua
+local args = ngx.req.get_uri_args()
+local id = args["id"]
+local redis = require "resty.redis"
+local cache = redis:new()
+local ok,err = cache:connect("192.168.0.3",6379)
+local item_model = cache:get("item_"..id)
+if item_model == ngx.null or item_model == nil then
+        local resp = ngx.location.capture("/item/get?id="..id)
+        item_model = resp.body
+end
+
+ngx.say(item_model)
+[root@JD openresty]# vim nginx/conf/nginx.conf
+location /luaitem/get {
+            default_type "application/json";
+            content_by_lua_file ../lua/itemredis.lua;
+        }
+[root@JD nginx]# sbin/nginx -s reload
+http://seckillserver/luaitem/get?id=1
+============RocketMQ==============
+[root@JD var]# yum install unzip
+unzip rocketmq-all-4.6.0-bin-release.zip
+mv rocketmq-all-4.6.0-bin-release rocketmq
+cd rocketmq
+cd bin
+vim runserver.sh
+JAVA_OPT="${JAVA_OPT} -server -Xms512m -Xmx512m -Xmn512m -XX:MetaspaceSize=128m -XX:MaxMetaspaceSize=320m"
+vim runbroker.sh
+JAVA_OPT="${JAVA_OPT} -server -Xms512m -Xmx512m -Xmn512m"
+cd ..
+========不修改的话默认内网IP导致连接不上=====
+vim conf/broker.conf
+brokerIP1 = 114.67.94.142
+nohup sh bin/mqnamesrv &
+tail -f ~/logs/rocketmqlogs/namesrv.log
+nohup sh bin/mqbroker -n localhost:9876 -c conf/broker.conf autoCreateTopicEnable=true &
+sh mqadmin clusterList -n localhost:9876（查看broker绑定状态/bin）
+#nohup sh bin/mqbroker -n localhost:9876 autoCreateTopicEnable=true &
+#nohup sh bin/mqbroker -n localhost:9876 &（官方文档有误）
+============测试RocketMQ是否启动成功====
+export NAMESRV_ADDR=localhost:9876
+sh bin/tools.sh org.apache.rocketmq.example.quickstart.Producer
+sh bin/tools.sh org.apache.rocketmq.example.quickstart.Consumer
+============创建Topic===============
+cd bin
+vim tools.sh
+JAVA_OPT="${JAVA_OPT} -Djava.ext.dirs=${BASE_DIR}/lib:${JAVA_HOME}/jre/lib/ext:/usr/java/jdk1.8.0_231-amd64/jre/lib/ext"
+./mqadmin updateTopic -n localhost:9876 -t stock -c DefaultCluster
